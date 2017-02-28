@@ -1,0 +1,17 @@
+Spark notes:
+
+Spark context: this is how the application knows how to connect to spark. In the PySpark shell, a special interpreter-aware SparkContext is already created for me in a variable called `sc`.
+
+You may also add dependencies (spark packages, for example), to your session session via the —packages argument. Additionally, you may use the —repositories argument for additional dependencies.
+
+—master local[4] <- causes pyspark to run on exactly 4 cores
+
+The run command looks like: ./bin/pyspark --master local[4] --py-files code.py
+which leverages the spark-submit script.
+
+RDD:
+
+fault-tolerant collection which can be operated on in parallel.
+Created by:
+  1. SparkContext’s parallelize method used on an existing utterable or collection
+  2. referencing a dataset in an external storage system (HDFS, shared filesystem, Hadoop InputFormat, HBase)
