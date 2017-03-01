@@ -24,3 +24,10 @@ Can persist RDD in memory using cache method to keep the elments on the cluster 
 Passing functions to SparkConf
 
 Longer functions are often wrapped in a `if __name__ == "__main__"` clause. These scripts are then run later, and wrapping them this way prevents them from execution at import time if that occurs.
+
+Local vs. Cluster Modes
+Execution is split up into a series of tasks. Each task executor is then supplied with a serialized object containing the variables required to execute the task, this serialized object is called the "closure".
+What is important is that this closure is referenced only locally, creating new instance variables when it does. So it is not safe to assume that a loop, for example, will update the value of a variable initialized outside of the content of that loop. It may update a variable with the same name and starting value, but that variable will be local to the memory of the excutor, and therefore it won't be modifying the original variable.
+Accumulators are a way for Spark to deal with this problem. "Accumulators in Spark are used specifically to provide a mechanism for safely updating a variable when execution is split up across worker nodes in a cluster."
+Constructors like loops or locally defined methods should not be used to mutate some global state. Accumulators are REQUIRED for these things to work in global mode (whereas anything may work in local, since it isn't sending closures around).
+Things like `rdd.foreach(println)` or `rdd.map(println)` will, in global mode, sending strings to the `stdout` of the executor, so the driver's interface won't show these. `.collect()` can be used to bring the RDD to the driver node, which would then allow it to be displayed. One can also use `.take(10)` to grab just ten of the items locally to print, etc.
