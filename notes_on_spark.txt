@@ -1,5 +1,7 @@
 Spark notes:
 
+THIS FILE CONTAINS A LOT OF SPORADIC NOTES AND SOME DUPLICATION FROM https://spark.apache.org/docs/latest/programming-guide.html
+
 Spark context: this is how the application knows how to connect to spark. In the PySpark shell, a special interpreter-aware SparkContext is already created for me in a variable called `sc`.
 
 You may also add dependencies (spark packages, for example), to your session session via the —packages argument. Additionally, you may use the —repositories argument for additional dependencies.
@@ -15,3 +17,10 @@ fault-tolerant collection which can be operated on in parallel.
 Created by:
   1. SparkContext’s parallelize method used on an existing utterable or collection
   2. referencing a dataset in an external storage system (HDFS, shared filesystem, Hadoop InputFormat, HBase)
+
+Supports transformations (produce new data set) and actions (return a value).
+Can persist RDD in memory using cache method to keep the elments on the cluster for faster access the next time it's queried. Also support for persisting RDDs on disk, or replicating across multiple nodes.
+
+Passing functions to SparkConf
+
+Longer functions are often wrapped in a `if __name__ == "__main__"` clause. These scripts are then run later, and wrapping them this way prevents them from execution at import time if that occurs.
