@@ -31,3 +31,31 @@ What is important is that this closure is referenced only locally, creating new 
 Accumulators are a way for Spark to deal with this problem. "Accumulators in Spark are used specifically to provide a mechanism for safely updating a variable when execution is split up across worker nodes in a cluster."
 Constructors like loops or locally defined methods should not be used to mutate some global state. Accumulators are REQUIRED for these things to work in global mode (whereas anything may work in local, since it isn't sending closures around).
 Things like `rdd.foreach(println)` or `rdd.map(println)` will, in global mode, sending strings to the `stdout` of the executor, so the driver's interface won't show these. `.collect()` can be used to bring the RDD to the driver node, which would then allow it to be displayed. One can also use `.take(10)` to grab just ten of the items locally to print, etc.
+
+The Shuffle
+Some operations force Spark to perform what is called a "shuffle", where it re-distributes data so it's grouped differently across partitions. This si a complex and costly operation.
+For example: `reduceByKey` must have keys collocated to produce the desired result. This may therefore require a shuffle. Spark reads from all partitions to find all values for the keys, and then brings together values across partitions to compute the final result for each key - this is called the "shuffle".
+`repartition` and `coalesce` operations, as well as 'ByKey opreations (except for counting) like `groupByKey` and `reduceByKey` and join operations like `cogroup` and `join` can cause shuffles.
+Shuffle uses `map` tasks to organize the data and `reduce` tasks to aggregate it. These are not the same as the `map` and `reduce` functions.
+
+RDD Persistence
+Caching an RDD stores any partitions that exist on each node's memory and reuses them in other actions on that dataset, or those derived from the dataset.
+Spark's cache is fault-tolerant. `persist()` or `cache()` methods both cache. A different storage "level" may be used for each of the cached RDDs. These storage levels are objects that are passed to the `cache()` method. For example `.cache(MEMORY_AND_DISK)`.
+Shuffle operations cause Spark to automatically persist some intermediate data. It's still recommended to use `persist()` if the RDD will be reused.
+Data partitions in caches monitored with partitions dropped on a least-recently-used basis. To force this for a specific RDD, use the `RDD.unpersist()` method.
+
+Accumulators
+Only the driver can read the accumulator, but it can be added to from anywhere. The syntax for a variable `v` to become an accumulator is `SparkContext.accumulator(v)`. For example:
+`accum = sc.accumulator(0); accum.value => 0`. Then you may run something like `sc.parallelize([1, 2, 3, 4]).foreach(lambda x: accum.add(x))` which sends each part of the `foreach` as a separate task to an executor, which then references the distributed accumulator.
+One can do non-integer based accumulators using `AccumulatorParam`, with an interface of `zero` and `addInPlace`. `zero` is the zero value, and `addInPlace` allows code to add two values of this type together. To then generate this you provide a starting value and the class to handle it. For example:
+<pre>class VectorAccumulatorParam(AccumulatorParam):
+    def zero(self, initialValue):
+        return Vector.zeros(initialValue.size)
+
+    def addInPlace(self, v1, v2):
+        v1 += v2
+        return v1
+
+# Then, create an Accumulator of this type:
+vecAccum = sc.accumulator(Vector(...), VectorAccumulatorParam())</pre>
+In transformations each tasks' update may be applied more than once if tasks or job stages are re-executed. In actions this is not an issue as Spark guarantees that each task's update to the accumulator will be applied only once (restarted tasks will not update the value).
